@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, status_pill, type_chip %}
+{% block title %}Cases - Exome AI{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Cases</h1>
+    <p>Exome analyses, from VCF upload to signed report.</p>
+  </div>
+  <a class="btn" href="/cases/new">{{ icon('plus') }} New case</a>
+</div>
+
+<div class="grid g4" style="margin-bottom:18px">
+  <div class="card stat"><div class="ico ico-brand">{{ icon('cases') }}</div><div><div class="n">{{ stats.total }}</div><div class="l">Total cases</div></div></div>
+  <div class="card stat"><div class="ico ico-run">{{ icon('activity') }}</div><div><div class="n">{{ stats.running }}</div><div class="l">Running now</div></div></div>
+  <div class="card stat"><div class="ico ico-inc">{{ icon('clock') }}</div><div><div class="n">{{ stats.review }}</div><div class="l">Need attention</div></div></div>
+  <div class="card stat"><div class="ico ico-neg">{{ icon('shield') }}</div><div><div class="n">{{ stats.approved }}</div><div class="l">Reports issued this month</div></div></div>
+</div>
+
+<div class="card">
+  <div class="toolbar">
+    <div class="search">{{ icon('search') }}<input type="search" id="q" placeholder="Search accession, patient, ID, indication..."></div>
+    <div class="seg" id="statusSeg">
+      <button data-v="" class="on">All</button>
+      <button data-v="active">Running</button>
+      <button data-v="review">To review</button>
+      <button data-v="approved">Approved</button>
+    </div>
+    <select id="typeSel"><option value="">All types</option><option value="single">Single</option><option value="trio">Trio</option><option value="couple">Couple</option></select>
+  </div>
+  {% if not cases %}
+  <div class="empty">
+    {{ icon('dna') }}
+    <h3>No cases yet</h3>
+    <p>Upload a VCF and clinical history to start the first analysis.</p>
+    <a class="btn" href="/cases/new">{{ icon('plus') }} New case</a>
+  </div>
+  {% else %}
+  <div class="table-wrap">
+  <table class="list cases">
+    <thead><tr><th>Accession</th><th>Patient</th><th>Type</th><th>Indication</th><th>Progress</th><th title="POSITIVE = explains the phenotype / at-risk couple. INCONCLUSIVE = uncertain finding needs review. NEGATIVE = nothing relevant found. CARRIER = carrier status only.">Result</th><th>Created</th><th></th></tr></thead>
+    <tbody>
+    {% for c in cases %}
+    {% set p = c.proband %}
+    {% set f = c.final_flag or c.ai_flag or c.rule_flag %}
+    {% set grp = 'active' if c.status in ('processing', 'queued') else ('approved' if c.status == 'approved' else ('rejected' if c.status == 'rejected' else 'review')) %}
+    <tr class="rowlink" data-href="/cases/{{ c.id }}" data-type="{{ c.case_type }}" data-grp="{{ grp }}"
+        data-q="{{ (c.accession ~ ' ' ~ (c.indication or '') ~ ' ' ~ (c.referring_clinician or '') ~ ' ' ~ (c.samples|map(attribute='name')|join(' ')) ~ ' ' ~ (c.samples|map(attribute='patient_id')|select|join(' ')))|lower }}">
+      <td><div class="acc">{{ c.accession }}</div></td>
+      <td>
+        {% if c.case_type == 'couple' %}
+        <div style="font-weight:600">{{ c.samples|map(attribute='name')|join(' & ') }}</div>
+        {% else %}
+        <div style="font-weight:600">{{ p.name if p else '-' }}</div>
+        <div class="xs muted">{{ p.patient_id or '' }}{% if p and (p.age or p.sex) %} &middot; {{ p.age or '' }} {{ (p.sex or '')|capitalize }}{% endif %}</div>
+        {% endif %}
+      </td>
+      <td>{{ type_chip(c.case_type) }}</td>
+      <td class="small" style="max-width:280px">{{ c.indication or ('Carrier screening' if c.case_type == 'couple' else '') }}</td>
+      <td style="min-width:170px">
+        {{ status_pill(c.status) }}
+        {% if c.status in ('processing', 'queued') %}
+          {% set n = step_no.get(c.stage or '', 0) %}
+          <div style="height:4px;background:var(--line);border-radius:4px;margin-top:7px;overflow:hidden"><div style="height:100%;width:{{ ((n + 0.5) / 7 * 100)|round }}%;background:var(--run)"></div></div>
+          <div class="xs muted" style="margin-top:3px">{{ step_label.get(c.stage or '', 'Queued') }}</div>
+        {% endif %}
+      </td>
+      <td>{% if f %}<span class="flag flag-{{ f }}">{{ f }}</span>{% if not c.final_flag %}<div class="xs faint" style="margin-top:3px">draft</div>{% endif %}{% else %}<span class="faint">-</span>{% endif %}</td>
+      <td class="small muted nowrap">{{ c.created_at|local('%d %b %Y') }}<div class="xs faint">{{ c.created_at|local('%H:%M') }}</div></td>
+      <td class="chev">{{ icon('chev') }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="empty hidden" id="noMatch"><h3>No matching cases</h3><p>Try a different search or filter.</p></div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const rows = [...document.querySelectorAll("tr.rowlink")];
+  rows.forEach(r => r.addEventListener("click", () => location.href = r.dataset.href));
+  let grp = "";
+  const q = document.getElementById("q"), typeSel = document.getElementById("typeSel");
+  function apply() {
+    const term = q.value.trim().toLowerCase(), t = typeSel.value;
+    let shown = 0;
+    rows.forEach(r => {
+      const ok = (!term || r.dataset.q.includes(term)) && (!t || r.dataset.type === t) && (!grp || r.dataset.grp === grp);
+      r.classList.toggle("hidden", !ok); shown += ok;
+    });
+    const nm = document.getElementById("noMatch");
+    if (nm) nm.classList.toggle("hidden", shown > 0 || !rows.length);
+  }
+  q.addEventListener("input", apply); typeSel.addEventListener("change", apply);
+  document.querySelectorAll("#statusSeg button").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll("#statusSeg button").forEach(x => x.classList.toggle("on", x === b));
+    grp = b.dataset.v; apply();
+  }));
+  // live refresh while anything is running
+  if (rows.some(r => r.dataset.grp === "active")) setTimeout(() => location.reload(), 5000);
+})();
+</script>
+{% endblock %}
