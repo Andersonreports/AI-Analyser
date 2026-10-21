@@ -13,43 +13,42 @@
     }
   }
   * { box-sizing: border-box; }
-  body { font-family: "Liberation Sans", Arial, Helvetica, sans-serif; font-size: 9.2pt; line-height: 1.5; color: #000; }
-  h1 { font-family: "Trebuchet MS", "DejaVu Sans", Arial, sans-serif; font-size: 21pt; font-weight: bold; color: #1f5fa8;
+  body { font-family: "Liberation Sans", Arial, Helvetica, sans-serif; font-size: 9.33pt; line-height: 1.5; color: #232529; }
+  h1 { font-family: "Trebuchet MS", "Ubuntu", "DejaVu Sans", Arial, sans-serif; font-size: 22pt; font-weight: bold; color: #155da6;
        text-align: center; margin: 0 0 4px; letter-spacing: .3px; }
   .subtitle { text-align: center; color: #444; font-size: 9.5pt; margin: 0 0 10px; }
-  h2 { font-size: 11.5pt; font-weight: bold; color: #1f4e8c; margin: 15px 0 5px; page-break-after: avoid; }
+  h2 { font-size: 11.3pt; font-weight: bold; color: #1a467c; margin: 15px 0 5px; page-break-after: avoid; }
+  .subhead { page-break-after: avoid; }
   p { margin: 0 0 6px; }
   .letterhead { text-align: left; margin: -12mm 0 4mm; }
   .letterhead img { max-width: 100%; max-height: 22mm; }
-  .labline { font-size: 8.5pt; color: #555; margin: -14mm 0 6mm; }
-  .labline b { color: #1f4e8c; font-size: 10pt; }
 
   table.info { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-  table.info td { width: 50%; background: #efefef; border: 1px solid #222; padding: 7px 9px; font-weight: bold; font-size: 9pt; height: 29px; vertical-align: middle; }
-  table.info td.blank { background: #efefef; }
+  table.info td { width: 50%; background: #f0f0f0; border: 1px solid #222; padding: 7px 9px; font-weight: bold; font-size: 9.33pt; color: #0d0f13; height: 29px; vertical-align: middle; }
+  table.info td.blank { background: #f0f0f0; }
   table.fam { width: 100%; border-collapse: collapse; margin: 2px 0 8px; font-size: 8.8pt; }
   table.fam th, table.fam td { border: 1px solid #222; padding: 3px 7px; text-align: left; }
-  table.fam th { background: #efefef; }
-  .who { font-weight: bold; color: #1f4e8c; margin: 8px 0 3px; }
+  table.fam th { background: #f0f0f0; }
+  .who { font-weight: bold; color: #1a467c; margin: 8px 0 3px; }
 
-  .box { border: 2px solid #111; text-align: center; font-weight: bold; padding: 7px 10px; margin: 6px 24px 8px 24px; font-size: 9.6pt; page-break-inside: avoid; }
-  .box.NEGATIVE { color: #12a150; }
+  .box { border: 2px solid #111; text-align: center; font-weight: bold; padding: 7px 10px; margin: 6px 24px 8px 24px; font-size: 9.33pt; page-break-inside: avoid; }
+  .box.NEGATIVE { color: #25a76a; }
   .box.POSITIVE { color: #c0392b; }
   .box.INCONCLUSIVE { color: #b26a00; }
-  .box.CARRIER { color: #1f5fa8; }
-  .foot { font-size: 8.4pt; margin: 0 0 2px; padding-left: 4px; }
+  .box.CARRIER { color: #1a467c; }
+  .foot { font-size: 8pt; color: #232529; margin: 0 0 2px; padding-left: 4px; }
 
   ul { margin: 2px 0 6px 0; padding-left: 20px; }
   li { margin-bottom: 3px; }
   .just { text-align: justify; }
 
   table.attr { margin: 6px auto 10px; border-collapse: collapse; width: 56%; }
-  table.attr td { border: 1px solid #111; padding: 6px 10px; text-align: center; font-size: 9pt; }
+  table.attr td { border: 1px solid #111; padding: 6px 10px; text-align: center; font-size: 9.33pt; color: #0d0f13; }
   table.attr td + td { font-weight: bold; }
 
   table.cls { width: 100%; border-collapse: collapse; margin: 6px 0 10px; page-break-inside: avoid; }
-  table.cls th { background: #fac090; border: 1px solid #111; padding: 6px; font-size: 9pt; }
-  table.cls td { border: 1px solid #111; padding: 4px 7px; font-size: 8.8pt; vertical-align: middle; }
+  table.cls th { background: #fabe8f; border: 1px solid #111; padding: 6px; font-size: 9.33pt; color: #0d0f13; }
+  table.cls td { border: 1px solid #111; padding: 4px 7px; font-size: 9.33pt; color: #0d0f13; vertical-align: middle; }
   table.cls td:first-child { text-align: center; width: 17%; }
 
   table.var { width: 100%; border-collapse: collapse; margin: 4px 0 8px; page-break-inside: avoid; }
@@ -69,7 +68,7 @@
   table.sig td b { display: block; }
   table.sig td.line { border-top: 1px solid #777; }
 
-  table.gene { border-collapse: collapse; width: 100%; margin-top: 6px; font-size: 8.4pt; }
+  table.gene { border-collapse: collapse; width: 100%; margin-top: 6px; font-size: 8pt; font-family: Calibri, Carlito, "Liberation Sans", Arial, sans-serif; }
   table.gene th, table.gene td { border: 1px solid #111; padding: 2px 5px; text-align: center; }
   table.gene th { font-weight: normal; font-size: 8pt; line-height: 1.2; }
   table.gene td.g { font-style: italic; }
@@ -81,8 +80,7 @@
 <body>
 {% if not final %}<div class="watermark">DRAFT</div>{% endif %}
 
-{% if letterhead_img %}<div class="letterhead"><img src="{{ letterhead_img }}"></div>
-{% else %}<div class="labline"><b>{{ lab.lab_name }}</b>{% if lab.lab_address %} &middot; {{ lab.lab_address }}{% endif %}{% if lab.lab_accreditation %} &middot; {{ lab.lab_accreditation }}{% endif %}</div>{% endif %}
+{% if letterhead_img %}<div class="letterhead"><img src="{{ letterhead_img }}"></div>{% endif %}
 
 <h1>{{ title }}</h1>
 {% if subtitle %}<div class="subtitle">{{ subtitle }}</div>{% endif %}
@@ -116,7 +114,6 @@
 {# ------------------------------------------------ clinical history #}
 <h2>Clinical History</h2>
 <p class="just">{{ clinical_history }}</p>
-{% if hpo and case.case_type != 'couple' %}<p class="small muted"><b>Phenotype (HPO):</b> {% for t in hpo %}{{ t.name }} ({{ t.id }}){% if not loop.last %}; {% endif %}{% endfor %}</p>{% endif %}
 
 {# ------------------------------------------------ results #}
 {% macro vtable(rows) %}
@@ -150,8 +147,8 @@
   </table>
   {% endif %}
   {% if sections.primary %}{{ vtable(sections.primary) }}{% endif %}
-  {% if sections.vus %}<p><b>Variants of uncertain significance relevant to the indication</b></p>{{ vtable(sections.vus) }}{% endif %}
-  {% if sections.carrier %}<p><b>Carrier findings</b></p>{{ vtable(sections.carrier) }}{% endif %}
+  {% if sections.vus %}<p class="subhead"><b>Variants of uncertain significance relevant to the indication</b></p>{{ vtable(sections.vus) }}{% endif %}
+  {% if sections.carrier %}<p class="subhead"><b>Carrier findings</b></p>{{ vtable(sections.carrier) }}{% endif %}
   {% if clinical_interpretation %}{% for para in clinical_interpretation.split('\n') if para.strip() %}<div class="interp">{{ para }}</div>{% endfor %}{% endif %}
   <p class="foot">*Genetic test results are based on the recommendation of American college of Medical Genetics [1].</p>
 {% endif %}
