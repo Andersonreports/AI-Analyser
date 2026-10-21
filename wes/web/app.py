@@ -57,6 +57,22 @@ def _local(dt, fmt: str = "%d %b %Y, %H:%M") -> str:
 
 templates.env.filters["local"] = _local
 
+# Cache-busting for /static/*: browsers aggressively cache CSS/JS by URL, so without
+# this, a server restart alone doesn't guarantee a CSS/JS fix actually reaches a browser
+# that already cached the old file - it has to be a new URL. Computed once from the
+# newest file mtime under static/ at process startup, so every restart (which is when
+# an edit takes effect anyway) naturally busts the cache for anything that changed.
+def _static_version() -> str:
+    static_dir = BASE / "static"
+    try:
+        newest = max((f.stat().st_mtime for f in static_dir.rglob("*") if f.is_file()), default=0)
+    except OSError:
+        newest = 0
+    return f"{int(newest)}"
+
+
+templates.env.globals["static_version"] = _static_version()
+
 ROLES = pipeline.ROLES
 FLAGS = ["POSITIVE", "INCONCLUSIVE", "NEGATIVE", "CARRIER"]
 SECTIONS = ["primary", "vus", "carrier", "secondary", "not_reported"]

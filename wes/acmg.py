@@ -26,6 +26,25 @@ def _min_intron_offset(hgvsc: str | None) -> int | None:
     offsets = [abs(int(m)) for m in _INTRON_OFFSET_RE.findall(hgvsc)]
     return min(offsets) if offsets else None
 
+# Genes with a near-identical paralog or segmental duplication, where short-read WES
+# routinely misaligns reads between the two copies and produces spurious SNV/indel calls.
+# Real disease risk at several of these loci (C4A/C4B, STRC) is driven by COPY NUMBER,
+# which this pipeline does not call at all - a single SNV/indel here is not trustworthy
+# without orthogonal confirmation (long-read sequencing, MLPA, ddPCR, Sanger with
+# paralog-specific primers). Several of these are already named in the report's standard
+# disclaimer (SMN1/2, GBA, PMS2, CYP21A2) for the same reason; this list is broader and
+# used to automatically soften PVS1 rather than rely on a human recognising the gene.
+PARALOG_PRONE_GENES = {
+    "C4A", "C4B",            # RCCX module, chr6 MHC class III - complement C4, SLE risk
+    "SMN1", "SMN2",          # spinal muscular atrophy
+    "GBA", "GBAP1",          # Gaucher disease
+    "PMS2", "PMS2CL",        # Lynch syndrome
+    "STRC", "STRCP1",        # hearing loss
+    "CYP21A2", "CYP21A1P",   # congenital adrenal hyperplasia
+    "NCF1", "NCF1B", "NCF1C",  # chronic granulomatous disease
+    "HBA1", "HBA2",          # alpha thalassaemia
+}
+
 POINTS = {"VeryStrong": 8, "Strong": 4, "Moderate": 2, "Supporting": 1}
 CLASS_ORDER = ["Pathogenic", "Likely pathogenic", "Uncertain significance", "Likely benign", "Benign"]
 SHORT = {"Pathogenic": "P", "Likely pathogenic": "LP", "Uncertain significance": "VUS",
@@ -60,6 +79,15 @@ def _pvs1(v: dict, g: GeneInfo) -> dict | None:
     cons = set(v["consequence"])
     if v["vtype"] != "lof":
         return None
+    if v.get("gene") in PARALOG_PRONE_GENES:
+        # not withheld entirely - the variant may be real - but short-read WES cannot
+        # reliably tell which paralog a read actually came from, so this is never
+        # treated as a confirmed null variant without orthogonal confirmation
+        return _crit("PVS1", "Supporting",
+                    f"{v['gene']} has a near-identical paralog/segmental duplication; short-read "
+                    "sequencing cannot reliably distinguish between them, so this call is not treated "
+                    "as confirmed LoF. Confirm with an orthogonal method (long-read sequencing, MLPA, "
+                    "ddPCR, or paralog-specific Sanger) before relying on it")
     modes = g.inheritance
     lof_mechanism = g.lof_intolerant or ("AR" in modes) or ("XLR" in modes) or (g.hi_score in ("2", "3"))
     if "start_lost" in cons:
@@ -207,6 +235,9 @@ def evaluate(v: dict, g: GeneInfo, case_type: str, parentage_confirmed: bool) ->
     if any("not the +/-1,2 dinucleotide" in c["reason"] for c in crit):
         audit.append("Annotation flagged a canonical splice-site consequence that the HGVSc notation does not "
                      "support (see PVS1 reason) - verify the raw VCF alignment before relying on this variant")
+    if v.get("gene") in PARALOG_PRONE_GENES:
+        audit.append(f"{v['gene']} has a near-identical paralog - this call needs orthogonal confirmation "
+                     "(not just a second look at this VCF) before being reported; see the PVS1 reason")
     return {"criteria": crit, "points": pts, "classification": cls, "short": SHORT[cls], "audit": audit}
 
 

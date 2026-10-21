@@ -1,6 +1,8 @@
 """Patient-phenotype to gene similarity (Resnik best-match, normalised 0-1)."""
 from __future__ import annotations
 
+import re
+
 from .resources import KnowledgeBase
 
 
@@ -105,13 +107,22 @@ _MODIFIER_STOPWORDS = {
 }
 
 
+# a negation word/prefix immediately before a match - "non-consanguineous", "no evidence
+# of X", "denies X", "without X" - means the opposite of the matched term, not its presence.
+# Checked against the ~30 characters right before each match, not the whole document.
+_NEGATION_RE = re.compile(
+    r"(?:\bnon|\bno|\bnot|\bwithout|\babsent|\bnegative for|\bdenies|\bdenied|\bruled out|"
+    r"\bexclud(?:e|es|ed|ing)|\bunremarkable for)"
+    r"(?:\s+(?:evidence|signs?|history|features?|findings?)\s+of)?[\s-]*$"
+)
+
+
 def extract_from_text(kb: KnowledgeBase, text: str) -> list[dict]:
     """Deterministic, LLM-independent HPO extraction: matches clinical-history text
     against known HPO term names/synonyms. Used whenever no AI is configured, and as a
     floor/safety-net even when AI is available - free text should never go completely
-    unused just because an LLM isn't reachable."""
-    import re
-
+    unused just because an LLM isn't reachable. A term immediately preceded by a negation
+    ("non-consanguineous", "no family history of X") is reported as excluded, not present."""
     onto = kb.ontology
     if not onto or not text or not text.strip():
         return []
@@ -122,7 +133,9 @@ def extract_from_text(kb: KnowledgeBase, text: str) -> list[dict]:
     for name, tid in names:
         if len(name) < 4 or name in _MODIFIER_STOPWORDS or tid in seen_ids:
             continue
-        if re.search(r"(?<![a-z])" + re.escape(name) + r"(?![a-z])", text_l):
+        m = re.search(r"(?<![a-z])" + re.escape(name) + r"(?![a-z])", text_l)
+        if m:
             seen_ids.add(tid)
-            out.append({"id": tid, "name": onto.name(tid), "excluded": False})
+            negated = bool(_NEGATION_RE.search(text_l[max(0, m.start() - 30):m.start()]))
+            out.append({"id": tid, "name": onto.name(tid), "excluded": negated})
     return out

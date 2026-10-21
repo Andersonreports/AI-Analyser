@@ -89,12 +89,44 @@ def test_pvs1_uses_spliceai_for_non_canonical_with_strong_support():
     assert crit["strength"] == "Strong"
 
 
+# ---------------------------------------------------------------- negation handling
+# "non-consanguineous", "no evidence of X", "denies X" mean the opposite of the matched
+# HPO term, not its presence - a real case extracted "consanguineous relationship" as
+# present from text that explicitly said "non-consanguineous parents".
+def test_negation_is_detected():
+    from wes.phenotype import extract_from_text
+    from wes.resources import kb
+    k = kb()  # the test fixture's small synthetic ontology, not the full downloaded one
+    text = "No evidence of myopathy. Denies seizure. Global developmental delay present."
+    hits = {h["id"]: h["excluded"] for h in extract_from_text(k, text)}
+    assert hits["HP:0003198"] is True   # "no evidence of myopathy"
+    assert hits["HP:0001250"] is True   # "denies seizure"
+    assert hits["HP:0001263"] is False  # genuinely present
+
+
 def test_min_intron_offset_parsing():
     assert acmg._min_intron_offset("c.147+77_147+121del") == 77
     assert acmg._min_intron_offset("c.1822-2A>G") == 2
     assert acmg._min_intron_offset("c.39+1G>A") == 1
     assert acmg._min_intron_offset("c.784_787del") is None
     assert acmg._min_intron_offset("c.-29-11C>T") == 11  # UTR position marker not mistaken for offset
+
+
+def test_pvs1_downgrades_paralog_prone_genes():
+    g = GeneInfo("C4B", diseases=[{"name": "Systemic lupus erythematosus", "inheritance": []}])
+    v = {"vtype": "lof", "consequence": ["frameshift_variant"], "gene": "C4B",
+        "hgvsc": "c.2504del", "exon": "20/41", "spliceai": None}
+    crit = acmg._pvs1(v, g)
+    assert crit["strength"] == "Supporting"
+    assert "near-identical paralog" in crit["reason"]
+
+
+def test_pvs1_unaffected_for_ordinary_genes():
+    g = GeneInfo("TESTGENE", diseases=[], hi_score="3")
+    v = {"vtype": "lof", "consequence": ["frameshift_variant"], "gene": "TESTGENE",
+        "hgvsc": "c.100del", "exon": "3/10", "spliceai": None}
+    crit = acmg._pvs1(v, g)
+    assert crit["strength"] == "VeryStrong"
 
 
 def test_downgraded_splice_call_classifies_below_likely_pathogenic():

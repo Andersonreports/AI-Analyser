@@ -38,14 +38,14 @@ def _event(db, case: Case, kind: str, msg: str, user: str | None = None) -> None
 
 # (key, label, what happens) - drives the live pipeline tracker in the UI
 STEPS = [
-    ("validate", "Validate input", "VCF format, GRCh38 build, sample columns"),
-    ("phenotype", "Phenotype", "Clinical history to HPO terms (AI) and validation"),
-    ("annotate", "Normalise & annotate", "bcftools normalisation, capture targets, Ensembl VEP: gnomAD, ClinVar, AlphaMissense"),
-    ("parse", "Parse variants", "Read annotated calls, MANE transcripts, genotypes"),
-    ("qc", "Quality control", "Genetic sex, Ti/Tv, runs of homozygosity, Mendelian checks"),
-    ("prioritise", "Prioritise & classify", "Inheritance models, ACMG/AMP criteria, phenotype ranking"),
-    ("ai", "AI interpretation", "Claude drafts findings, result flag and report text"),
-    ("review", "Scientist review", "Confirm findings, flag and interpretation"),
+    ("validate", "Validate input", "Checking file format and sample information"),
+    ("phenotype", "Phenotype", "Matching the clinical history to known symptom terms"),
+    ("annotate", "Normalise & annotate", "Standardising variant calls and adding population frequency, clinical and predicted-impact data"),
+    ("parse", "Parse variants", "Reading annotated calls and genotypes"),
+    ("qc", "Quality control", "Checking sample quality, genetic sex and relatedness"),
+    ("prioritise", "Prioritise & classify", "Ranking variants by inheritance pattern, phenotype fit and classification guidelines"),
+    ("ai", "AI interpretation", "Drafting findings, result flag and report text"),
+    ("review", "Genome analyst review", "Confirm findings, flag and interpretation"),
     ("approved", "Report issued", "Approved, versioned PDF report"),
 ]
 STEP_LABEL = dict((k, label) for k, label, _ in STEPS)
@@ -273,7 +273,7 @@ def _run_ai(db, case: Case) -> None:
     results = case.results or {}
     pool = _all_variants(results)
     if not ai.available():
-        _event(db, case, "stage", "[ai:skipped] AI interpretation skipped - no ANTHROPIC_API_KEY")
+        _event(db, case, "stage", "[ai:skipped] AI interpretation skipped - AI assistant not configured")
         _event(db, case, "warning", "AI assistant is not configured (no API key set) - a rule-based draft was prepared instead. You can still review and edit everything below.")
         case.ai_result, case.ai_flag = None, None
         case.review = _with_report_fields(case, _with_audit(draft_from_rules(case, pool), pool))

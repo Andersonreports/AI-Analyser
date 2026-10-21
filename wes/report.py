@@ -157,7 +157,6 @@ def build_context(case: Case, final: bool) -> dict:
         "sections": sections,
         "at_risk": at_risk,
         "clinical_history": review.get("clinical_history_text") or "",
-        "hpo": [t for t in case.hpo_terms if not t.get("excluded")],
         "cnv_text": review.get("cnv_text") or "",
         "clinical_interpretation": review.get("clinical_interpretation", ""),
         "recommendations": review.get("recommendations") or [],
