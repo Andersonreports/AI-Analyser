@@ -3,11 +3,11 @@
 {% block title %}New case - Exome AI{% endblock %}
 {% block crumbs %}<a href="/">Cases</a> / <b>New case</b>{% endblock %}
 {% block content %}
-<div class="page-head">
+<div class="page-head" style="max-width:900px;margin:0 auto 20px">
   <div><h1>New case</h1><p>Upload the VCF and clinical history, then start. Everything else (patient ID, sample details, report wording) is filled in later, once results are ready to report.</p></div>
 </div>
 
-<form method="post" action="/cases" enctype="multipart/form-data" id="caseForm" class="stack" style="max-width:900px">
+<form method="post" action="/cases" enctype="multipart/form-data" id="caseForm" class="stack" style="max-width:900px;margin:0 auto">
 
 <div class="card card-pad">
   <div class="step"><div class="step-num">1</div><div class="step-body">
@@ -26,11 +26,11 @@
 <div class="card card-pad">
   <div class="step"><div class="step-num">2</div><div class="step-body">
     <div class="step-title">Samples</div>
-    <p class="step-sub">GRCh38 VCF (.vcf or .vcf.gz) per person, or one combined multi-sample VCF.</p>
-    <label class="drop" id="combinedDrop" style="margin-bottom:14px">
+    <p class="step-sub" id="samplesSub">GRCh38 VCF (.vcf or .vcf.gz).</p>
+    <label class="drop hidden" id="combinedDrop" style="margin-bottom:14px">
       {{ icon('upload') }}
       <div><div class="t">Combined multi-sample VCF <span class="muted" style="font-weight:400">(optional)</span></div>
-        <div class="s">Use instead of individual files below.</div></div>
+        <div class="s">If one file already contains everyone, upload it here instead of separately below.</div></div>
       <input type="file" name="combined_vcf" accept=".vcf,.gz">
     </label>
     <div class="grid g3" id="roleCards"></div>
@@ -121,9 +121,20 @@ function wireDrop(drop) {
 function render() {
   const t = document.querySelector("input[name=case_type]:checked").value;
   const box = document.getElementById("roleCards");
-  box.className = "grid " + (t === "single" ? "g2" : t === "trio" ? "g3" : "g2");
+  box.className = "grid " + (t === "single" ? "" : t === "trio" ? "g3" : "g2");
   box.innerHTML = ROLE_SETS[t].map(([r, l]) => roleCard(r, l)).join("");
   box.querySelectorAll(".drop").forEach(wireDrop);
+
+  // "combined VCF" only means something when there's more than one person - for a
+  // single case it would just be a second, confusing way to upload the same one file
+  const combinedDrop = document.getElementById("combinedDrop");
+  const multiPerson = t !== "single";
+  combinedDrop.classList.toggle("hidden", !multiPerson);
+  if (!multiPerson) combinedDrop.querySelector("input[type=file]").value = "";
+  document.getElementById("samplesSub").textContent = multiPerson
+    ? "GRCh38 VCF (.vcf or .vcf.gz) per person, or one combined multi-sample VCF covering everyone."
+    : "GRCh38 VCF (.vcf or .vcf.gz).";
+
   document.querySelectorAll(".pheno-only").forEach(el => el.classList.toggle("hidden", t === "couple"));
   document.querySelectorAll(".couple-only").forEach(el => el.classList.toggle("hidden", t !== "couple"));
   document.querySelectorAll('textarea[name="clinical_history"]').forEach(el => {

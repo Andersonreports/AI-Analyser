@@ -13,21 +13,12 @@
   const ZYG = {het: "Het", hom: "Hom", hemizygous: "Hemi", ref: "Ref", no_call: "NC", homoplasmic: "Homo", heteroplasmic: "Hetero"};
   let data = null, review = null, pool = {};
 
-  // ---------------------------------------------------------------- evidence disclosure
-  if ($("evidenceToggle")) {
-    $("evidenceToggle").addEventListener("click", () => $("evidenceBox").classList.toggle("open"));
-  }
-
-  // ---------------------------------------------------------------- tabs (inside evidence box)
-  function showTabDesc(b) { setText("tabDesc", b.dataset.desc || ""); }
+  // ---------------------------------------------------------------- page tabs (overview/patient/evidence/activity)
   document.querySelectorAll("#tabs button").forEach((b) => b.addEventListener("click", () => {
     document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("on", x === b));
     document.querySelectorAll("[data-pane]").forEach((p) => p.classList.toggle("hidden", p.dataset.pane !== b.dataset.tab));
-    showTabDesc(b);
   }));
   if (C.type !== "couple") document.querySelectorAll(".couple-only").forEach((e) => e.classList.add("hidden"));
-  const initialTab = document.querySelector("#tabs button.on");
-  if (initialTab) showTabDesc(initialTab);
 
   // ---------------------------------------------------------------- reject flow
   if ($("rejectBtn")) {
@@ -60,6 +51,9 @@
     }).join("");
     const first = steps.find((st) => st.started);
     if (first && ["processing", "queued"].includes(C.status)) setText("pipeElapsed", `Elapsed ${fmtDur((Date.now() - new Date(first.started).getTime()) / 1000)}`);
+    const current = steps.find((st) => st.state === "current");
+    if (current) setText("currentStepLabel", current.label + "…");
+    else if (C.status === "queued") setText("currentStepLabel", "Queued…");
   }
   renderSteps(C.steps);
 
@@ -142,7 +136,9 @@
     const ro = !C.editable ? "disabled" : "";
     const flags = C.flags.filter((f) => C.type === "couple" || f !== "CARRIER");
     const attentionItems = review.reviewer_attention || [];
-    const attention = attentionItems.map((a) => `<div class="warn">${esc(a)}</div>`).join("");
+    const attention = attentionItems.length
+      ? `<div class="attn-head">Needs your attention before approving (${attentionItems.length})</div>${attentionItems.map((a) => `<div class="warn">${esc(a)}</div>`).join("")}`
+      : "";
     const srcLine = review.source === "ai"
       ? "This draft was written by the AI assistant from the evidence below."
       : "This draft was built automatically from the classification rules (no AI assistant was used for this case).";
@@ -238,7 +234,11 @@
     setText("rvMsg", "Saving...");
     const r = await fetch(`/api/cases/${C.id}/review`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
     setText("rvMsg", r.ok ? `Saved ${new Date().toLocaleTimeString()}` : `Error: ${(await r.json()).detail}`);
-    if (r.ok) poll();
+    if (r.ok) {
+      const approveBtn = $("approveBtn");
+      if (approveBtn) { approveBtn.disabled = false; approveBtn.removeAttribute("title"); }
+      poll();
+    }
   }
 
   function addFinding(key, section) {
@@ -255,6 +255,8 @@
       interpretation: "",
     });
     renderFindings();
+    const overviewTab = document.querySelector('#tabs button[data-tab="overview"]');
+    if (overviewTab) overviewTab.click();
     const target = $("finalizeCard");
     if (target) target.scrollIntoView({behavior: "smooth", block: "start"});
   }
@@ -263,11 +265,11 @@
   function variantTable(list, opts = {}) {
     if (!list || !list.length) return '<p class="muted small">None.</p>';
     return `<table class="list"><tr>
-      ${opts.rank ? "<th>#</th>" : ""}<th>Variant</th><th>Zygosity</th><th>Model / segregation</th><th>gnomAD</th><th>ClinVar</th>
+      ${opts.rank ? "<th>#</th>" : ""}<th class="var-col">Variant</th><th>Zygosity</th><th>Model / segregation</th><th>gnomAD</th><th>ClinVar</th>
       <th>In silico</th><th>Pheno</th><th>ACMG</th>${C.editable ? "<th></th>" : ""}</tr>
       ${list.map((v) => `<tr>
         ${opts.rank ? `<td>${v.rank ?? ""}</td>` : ""}
-        <td>${varLabel(v)}<div class="small muted">${esc(v.consequence_str)} ${v.exon ? "exon " + esc(v.exon) : ""} &middot; chr${esc(v.chrom)}:${v.pos} ${esc(v.ref)}&gt;${esc(v.alt)}</div>
+        <td class="var-col">${varLabel(v)}<div class="small muted">${esc(v.consequence_str)} ${v.exon ? "exon " + esc(v.exon) : ""} &middot; chr${esc(v.chrom)}:${v.pos} ${esc(v.ref)}&gt;${esc(v.alt)}</div>
           <div class="small muted">${esc(((v.gene_info && v.gene_info.diseases) || []).slice(0, 2).map((d) => d.name + (d.inheritance.length ? ` (${d.inheritance.join("/")})` : "")).join("; "))}</div></td>
         <td class="small">${zyg(v)}</td>
         <td class="small">${esc((v.models || []).join(", "))}${v.inheritance_match === false ? ' <span class="cls-P" title="Gene inheritance does not fit">!</span>' : ""}
@@ -341,7 +343,7 @@
     setHTML("warnings", (data.warnings || []).map((w) => `<div class="warn">${esc(w)}</div>`).join(""));
     renderReview();
     setText("nCand", data.candidates.length || "");
-    setHTML("candidates", (data.candidates.length ? `<p class="small muted">${data.candidates.length} prioritised candidates (top ${Math.min(data.candidates.length, 40)} sent to AI). Hover criteria for reasons.</p>` : "") + variantTable(data.candidates, {rank: true}));
+    setHTML("candidates", variantTable(data.candidates, {rank: true}));
     wireAdd($("candidates"));
     renderQc(); renderSecondary(); renderCouple(); renderAi();
   }

@@ -46,6 +46,10 @@
 <span class="pill st st-{{ status }}"><span class="dot"></span>{{ {'needs_mapping': 'Needs mapping', 'review': 'Awaiting review', 'approved': 'Approved', 'rejected': 'Rejected', 'processing': 'Processing', 'queued': 'Queued', 'failed': 'Failed', 'created': 'Created'}.get(status, status) }}</span>
 {%- endmacro %}
 
+{% macro status_dot(status) -%}
+<span class="status-dot st-{{ status }}"><span class="dot"></span>{{ {'needs_mapping': 'Needs mapping', 'review': 'Awaiting review', 'approved': 'Approved', 'rejected': 'Rejected', 'processing': 'Processing', 'queued': 'Queued', 'failed': 'Failed', 'created': 'Created'}.get(status, status) }}</span>
+{%- endmacro %}
+
 {% macro type_chip(kind) -%}
 <span class="type-chip">{{ icon('user') if kind == 'single' else icon('activity') if kind == 'trio' else icon('dna') }}{{ {'single': 'Single', 'trio': 'Trio', 'couple': 'Couple'}[kind] }}</span>
 {%- endmacro %}
